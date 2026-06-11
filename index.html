@@ -112,55 +112,116 @@
      ══════════════════════════════════════════════════ -->
 <div id="mathPanel">
   <div id="mathInner">
-    <h2>🔭 Gravity Simulator — Physics &amp; Code</h2>
+    <h2>🔭 Гравитационен симулатор — Физика и код</h2>
 
-    <h3>📐 Newton's Law of Universal Gravitation</h3>
-    <p>Every body attracts every other with a force proportional to their
-       masses and inversely proportional to the square of the distance.</p>
-    <code>F = G × m₁ × m₂ / d²
+    <h3>📐 Закон на Нютон за всемирното привличане</h3>
+    <p>Всяко тяло привлича всяко друго тяло. Силата е <b>право пропорционална</b>
+       на масите (по-тежко = по-силно дърпа) и <b>обратно пропорционална</b> на
+       квадрата на разстоянието (по-далеч = много по-слабо дърпа).</p>
+    <code>F = G × m₁ × m₂ / d²</code>
+    <p><b>Какво означава всеки символ:</b></p>
+    <ul>
+      <li><b>F</b> — гравитационната сила между двете тела.</li>
+      <li><b>G</b> — гравитационна константа. В реалния свят е мъничка
+          (6.674×10⁻¹¹). Тук я слагаме <b>0.5</b>, за да виждаме движение веднага.</li>
+      <li><b>m₁, m₂</b> — масите на двете тела.</li>
+      <li><b>d²</b> — квадратът на разстоянието между центровете им. Понеже е
+          „на квадрат", силата спада <b>много бързо</b> с отдалечаването.</li>
+      <li><b>+80 (смекчаване / softening)</b> — добавя се към d², за да НЕ стане
+          силата безкрайна, когато две тела почти се допрат (d ≈ 0). Без него
+          числата „избухват" до безкрайност и симулацията се чупи.</li>
+    </ul>
+    <p><b>С прости думи:</b> голяма маса дърпа силно; голямо разстояние дърпа слабо.</p>
 
-G  = 0.5  (scaled gravitational constant)
-m₁, m₂ = masses of the two bodies
-d² = squared distance  (+80 softening factor prevents infinity at d ≈ 0)</code>
-
-    <h3>🚀 Euler Integration (velocity + position)</h3>
-    <code>// Each physics tick:
+    <h3>🚀 Интегриране по метода на Ойлер (скорост + позиция)</h3>
+    <p>Симулацията не решава всичко наведнъж. На всяка мъничка стъпка (tick) тя
+       пресмята отново: <b>ускорение → скорост → позиция</b>. Това се нарича
+       числено интегриране.</p>
+    <code>// На всяка физична стъпка:
 ax += G × mⱼ / (d² + 80) × (dx/d)
 ay += G × mⱼ / (d² + 80) × (dy/d)
 
-vx += ax;   vy += ay    ← velocity from acceleration
-x  += vx;   y  += vy    ← position  from velocity</code>
+vx += ax;   vy += ay    ← скоростта идва от ускорението
+x  += vx;   y  += vy    ← позицията идва от скоростта</code>
+    <p><b>Стъпка по стъпка:</b></p>
+    <ul>
+      <li><b>ax, ay</b> — ускорението по хоризонтала (x) и вертикала (y). Събираме
+          приноса от всяко друго тяло.</li>
+      <li><b>(dx/d) и (dy/d)</b> — посоката към другото тяло (единичен вектор).
+          Казва НАКЪДЕ да дърпа силата.</li>
+      <li><b>vx += ax</b> — ускорението променя скоростта.</li>
+      <li><b>x += vx</b> — скоростта премества тялото.</li>
+    </ul>
+    <p>Това е <b>симплектичен Ойлер</b> — прост и достатъчно стабилен за реално време.</p>
 
-    <h3>💥 Conservation of Momentum (Merge)</h3>
-    <code>// New velocity after merge:
+    <h3>🌀 Кръгова орбитална скорост (за демо сцените)</h3>
+    <p>За да обикаля едно тяло <b>стабилно</b> около централната маса — без да пада
+       в нея и без да отлети — му трябва точно определена скорост:</p>
+    <code>v = √( G × M / r )
+
+// със смекчаването, което ползва симулацията:
+v = √( G × M × r / (r² + 80) )</code>
+    <ul>
+      <li><b>Твърде малка</b> скорост → тялото пада навътре (спирала към центъра)
+          и в крайна сметка изчезва.</li>
+      <li><b>Точната</b> скорост → стабилна кръгова орбита (обикаля вечно).</li>
+      <li><b>Твърде голяма</b> скорост → тялото отлита по елипса или избягва.</li>
+    </ul>
+    <p>Точно тази формула се ползва в демо сцените, за да са орбитите стабилни.</p>
+
+    <h3>💥 Запазване на импулса (при сливане)</h3>
+    <p>Когато две обикновени тела се ударят, по-голямото поглъща по-малкото.
+       Новата скорост е <b>среднопретеглена</b> спрямо масите — както при реален
+       нееластичен сблъсък.</p>
+    <code>// Нова скорост след сливане:
 vx_new = (vx₁×m₁ + vx₂×m₂) / (m₁ + m₂)
 
-// New radius — volume is conserved:
+// Нов радиус — обемът се запазва:
 r_new = ∛(r₁³ + r₂³)</code>
+    <ul>
+      <li><b>Импулс (p = m×v)</b> се запазва: тежкото тяло „диктува" повече от
+          крайната скорост, лекото — по-малко.</li>
+      <li><b>r_new = ∛(r₁³ + r₂³)</b> — радиусът расте по <b>кубичен корен</b>, защото
+          обемът на топка зависи от r³. Затова две еднакви топки не дават двоен
+          радиус, а само ×1.26.</li>
+    </ul>
 
-    <h3>⬛ Body Masses</h3>
-    <code>Black Hole : 6000    Star : 800    Planet : 150
-Comet      :   60    Asteroid : 35    Moon : 20</code>
+    <h3>🧱 Отскок от стените (с амортизация)</h3>
+    <p>Ако „Bounce" е включено, телата отскачат от ръбовете, но губят част от
+       енергията си — умножаваме скоростта по <b>0.75</b> (25% загуба при всеки
+       отскок), както при истински нееластичен удар в стена.</p>
+    <code>vx → −vx × 0.75   (удар в ляв/десен ръб)
+vy → −vy × 0.75   (удар в горен/долен ръб)</code>
 
-    <h3>🎨 Visual Realism</h3>
-    <p><span class="tag">5 Planet Types</span>
-       Oceanic, Rocky, Desert, Ice, Gas Giant — procedurally generated at spawn.</p>
-    <p><span class="tag">Star Lighting</span>
-       Shadow gradient applied per frame, direction computed from nearest Star body.</p>
-    <p><span class="tag">Accretion Disk</span>
-       Three rotating ellipse rings around black holes simulate infalling matter.</p>
-    <p><span class="tag">Comet Tails</span>
-       Dust tail (wide, green) + ion tail (thin, blue), both opposing the velocity vector.</p>
+    <h3>⬛ Маси на телата</h3>
+    <code>Черна дупка: 6000    Звезда: 800    Планета: 150
+Комета:        60    Астероид: 35    Луна:    20</code>
+    <p>Колкото по-голяма е масата, толкова по-силно тялото привлича останалите.
+       Затова черната дупка „command-ва" цялата сцена.</p>
 
-    <h3>⚡ Performance Optimisations</h3>
-    <p><span class="tag">Distance cutoff</span>
-       Body pairs farther than 700 px are skipped (unless one is a black hole or star).</p>
-    <p><span class="tag">Adaptive steps</span>
-       When body count &gt; 38, only 1 physics step runs per frame instead of N.</p>
-    <p><span class="tag">Batch particles</span>
-       Particles grouped by colour — 1 fillStyle change per colour bucket.</p>
+    <h3>🎨 Визуална реалистичност</h3>
+    <p><span class="tag">5 типа планети</span>
+       Океанска, Скалиста, Пустинна, Ледена, Газов гигант — генерират се
+       процедурно при създаване.</p>
+    <p><span class="tag">Осветление от звезда</span>
+       Сянката се пресмята всеки кадър, посоката идва от най-близката звезда.</p>
+    <p><span class="tag">Акреционен диск</span>
+       Три въртящи се елипси около черните дупки имитират падаща материя.</p>
+    <p><span class="tag">Опашки на комета</span>
+       Прахова опашка (широка, зелена) + йонна опашка (тънка, синя), и двете
+       сочат обратно на скоростта.</p>
+
+    <h3>⚡ Оптимизации за производителност</h3>
+    <p><span class="tag">Отрязване по разстояние</span>
+       Двойки тела на повече от 700 px се пропускат (освен ако едното е черна
+       дупка или звезда — те имат неограничен обхват).</p>
+    <p><span class="tag">Адаптивни стъпки</span>
+       При над 38 тела се прави само 1 физична стъпка на кадър вместо N.</p>
+    <p><span class="tag">Групиране на частици</span>
+       Частиците се групират по цвят — 1 смяна на цвета за група.</p>
     <p><span class="tag">Trail ring-buffer</span>
-       Trail history stored in a Float32Array ring buffer — no garbage created per frame.</p>
+       Историята на следата се пази във Float32Array пръстеновиден буфер — без
+       създаване на боклук (garbage) всеки кадър.</p>
 
     <button id="closeBtn">Close</button>
   </div>
