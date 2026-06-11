@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gravity Simulator</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     App shell
+     ══════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- ── Toolbar ─────────────────────────────────── -->
+  <div id="toolbar">
+
+    <!-- Body-type mode buttons -->
+    <button class="mb on" id="bPlanet"
+      style="--mc:#378add55;--mb:rgba(55,138,221,0.12);--ms:#378add20;">🪐 Planet</button>
+    <button class="mb" id="bMoon"
+      style="--mc:#9ca3af44;--mb:rgba(156,163,175,0.1);">🌑 Moon</button>
+    <button class="mb" id="bStar"
+      style="--mc:#fbbf2455;--mb:rgba(251,191,36,0.12);--ms:#fbbf2422;">⭐ Star</button>
+    <button class="mb" id="bBlack"
+      style="--mc:#7c3aed55;--mb:rgba(124,58,237,0.12);--ms:#7c3aed22;">⚫ Black Hole</button>
+    <button class="mb" id="bComet"
+      style="--mc:#34d39955;--mb:rgba(52,211,153,0.1);">☄ Comet</button>
+    <button class="mb" id="bAsteroid"
+      style="--mc:#f9731655;--mb:rgba(249,115,22,0.1);">🪨 Asteroid</button>
+
+    <div class="sep"></div>
+
+    <!-- Simulation controls -->
+    <button class="ab act" id="bBounce">⬜ Bounce</button>
+    <button class="ab"     id="bPause">⏸ Pause</button>
+    <button class="ab"     id="bVectors">→ Vectors</button>
+
+    <div class="sep"></div>
+
+    <!-- Speed multiplier -->
+    <div id="speedWrap">
+      <label>Speed</label>
+      <input type="range" id="rSpeed" min="1" max="4" step="1" value="1">
+      <span id="spdLbl">1×</span>
+    </div>
+
+    <div class="sep"></div>
+
+    <button class="ab" id="bClear">Clear</button>
+    <button class="ab" id="bDemo">Demo ▾</button>
+    <button class="ab" id="bMath"
+      style="color:#60a5fa;border-color:rgba(96,165,250,0.2);">Math ↗</button>
+  </div>
+
+  <!-- ── Canvas area + overlays ───────────────────── -->
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+
+    <!-- Stats overlay (bottom-left) -->
+    <div id="stats">
+      <div class="st"><div class="sl">Bodies</div><span id="sBodies"   style="color:#c8dde8">0</span></div>
+      <div class="st"><div class="sl">Merges</div><span id="sMerge"    style="color:#fbbf24">0</span></div>
+      <div class="st"><div class="sl">Swallowed</div><span id="sSwallow" style="color:#c084fc">0</span></div>
+      <div class="st"><div class="sl">Zoom</div><span id="sZoom"       style="color:#7dd3fc">1.0×</span></div>
+    </div>
+
+    <!-- Body inspector (top-right) -->
+    <div id="bodyInfo">
+      <div id="biType">Body</div>
+      <div class="brow"><span class="bk">Mass</span>  <span class="bv" id="biMass">—</span></div>
+      <div class="brow"><span class="bk">Speed</span> <span class="bv" id="biSpeed">—</span></div>
+      <div class="brow"><span class="bk">Radius</span><span class="bv" id="biRadius">—</span></div>
+      <div class="brow"><span class="bk">Age</span>   <span class="bv" id="biAge">—</span></div>
+    </div>
+
+    <!-- Pause overlay -->
+    <div id="pauseOvr"><span>PAUSED</span></div>
+
+    <!-- Demo scene dropdown -->
+    <div id="demoMenu">
+      <div class="dmi" data-demo="solar">
+        🌍 Solar System
+        <small>Black hole + planets + asteroids + comet</small>
+      </div>
+      <div class="dmi" data-demo="binary">
+        ⚫ Binary Black Holes
+        <small>Two black holes in mutual orbit</small>
+      </div>
+      <div class="dmi" data-demo="cluster">
+        ⭐ Star Cluster
+        <small>Stars in gravitational chaos</small>
+      </div>
+      <div class="dmi" data-demo="galaxy">
+        🌌 Galaxy Collision
+        <small>Two galaxies on a collision course</small>
+      </div>
+    </div>
+
+    <!-- Keyboard hint (bottom-right) -->
+    <div id="hint">
+      Left-drag → launch &nbsp;|&nbsp; Click body → inspect &nbsp;|&nbsp;
+      Right-drag → pan &nbsp;|&nbsp; Scroll → zoom<br>
+      Space = Pause &nbsp;|&nbsp; R = Reset view &nbsp;|&nbsp; Esc = Deselect
+    </div>
+  </div><!-- /canvas-wrap -->
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════
+     Physics / Math reference panel (modal overlay)
+     ══════════════════════════════════════════════════ -->
+<div id="mathPanel">
+  <div id="mathInner">
+    <h2>🔭 Gravity Simulator — Physics &amp; Code</h2>
+
+    <h3>📐 Newton's Law of Universal Gravitation</h3>
+    <p>Every body attracts every other with a force proportional to their
+       masses and inversely proportional to the square of the distance.</p>
+    <code>F = G × m₁ × m₂ / d²
+
+G  = 0.5  (scaled gravitational constant)
+m₁, m₂ = masses of the two bodies
+d² = squared distance  (+80 softening factor prevents infinity at d ≈ 0)</code>
+
+    <h3>🚀 Euler Integration (velocity + position)</h3>
+    <code>// Each physics tick:
+ax += G × mⱼ / (d² + 80) × (dx/d)
+ay += G × mⱼ / (d² + 80) × (dy/d)
+
+vx += ax;   vy += ay    ← velocity from acceleration
+x  += vx;   y  += vy    ← position  from velocity</code>
+
+    <h3>💥 Conservation of Momentum (Merge)</h3>
+    <code>// New velocity after merge:
+vx_new = (vx₁×m₁ + vx₂×m₂) / (m₁ + m₂)
+
+// New radius — volume is conserved:
+r_new = ∛(r₁³ + r₂³)</code>
+
+    <h3>⬛ Body Masses</h3>
+    <code>Black Hole : 6000    Star : 800    Planet : 150
+Comet      :   60    Asteroid : 35    Moon : 20</code>
+
+    <h3>🎨 Visual Realism</h3>
+    <p><span class="tag">5 Planet Types</span>
+       Oceanic, Rocky, Desert, Ice, Gas Giant — procedurally generated at spawn.</p>
+    <p><span class="tag">Star Lighting</span>
+       Shadow gradient applied per frame, direction computed from nearest Star body.</p>
+    <p><span class="tag">Accretion Disk</span>
+       Three rotating ellipse rings around black holes simulate infalling matter.</p>
+    <p><span class="tag">Comet Tails</span>
+       Dust tail (wide, green) + ion tail (thin, blue), both opposing the velocity vector.</p>
+
+    <h3>⚡ Performance Optimisations</h3>
+    <p><span class="tag">Distance cutoff</span>
+       Body pairs farther than 700 px are skipped (unless one is a black hole or star).</p>
+    <p><span class="tag">Adaptive steps</span>
+       When body count &gt; 38, only 1 physics step runs per frame instead of N.</p>
+    <p><span class="tag">Batch particles</span>
+       Particles grouped by colour — 1 fillStyle change per colour bucket.</p>
+    <p><span class="tag">Trail ring-buffer</span>
+       Trail history stored in a Float32Array ring buffer — no garbage created per frame.</p>
+
+    <button id="closeBtn">Close</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     JavaScript modules — loaded in dependency order
+     All files share the same global scope (no ES modules needed).
+     ══════════════════════════════════════════════════ -->
+<script src="js/constants.js"></script>  <!-- G, TRAIL, TY, planet schemes  -->
+<script src="js/state.js"></script>      <!-- canvas refs + all mutable state-->
+<script src="js/camera.js"></script>     <!-- camX/Y/Z, s2w(), applyCam()   -->
+<script src="js/bodies.js"></script>     <!-- hx(), mkB(), assignViz()       -->
+<script src="js/effects.js"></script>    <!-- spP/S/N, kill(), tickFX()      -->
+<script src="js/physics.js"></script>    <!-- step() — N-body gravity        -->
+<script src="js/render.js"></script>     <!-- draw() and all draw* functions -->
+<script src="js/demo.js"></script>       <!-- clearAll(), loadDemo()         -->
+<script src="js/controls.js"></script>  <!-- all UI event listeners         -->
+<script src="js/main.js"></script>       <!-- resize(), loop(), init()       -->
+
+</body>
+</html>
