@@ -28,40 +28,53 @@ function loadDemo(name = 'solar') {
   // Central black hole with four orbiting bodies, one moon,
   // an asteroid belt, and a long-period comet.
   if (name === 'solar') {
-    bodies.push(mkB(cx, cy, 0, 0, 'black'));
+    const bh = mkB(cx, cy, 0, 0, 'black');
+    bodies.push(bh);
 
-    // [orbital radius, speed, type]
+    // Circular-orbit speed around the central black hole at distance r.
+    // Uses the SAME softening (+80) as physics.js, so the orbit is genuinely
+    // stable instead of spiralling inward:
+    //     v = √( G · M · r / (r² + 80) )
+    const vCirc = r => Math.sqrt(G * bh.mass * r / (r*r + 80));
+
+    // [orbital radius, type] — speed is COMPUTED for a stable circular orbit
     [
-      [ 88, 2.25, 'planet'],
-      [148, 1.68, 'planet'],
-      [218, 1.32, 'star'  ],
-      [295, 1.08, 'planet'],
-    ].forEach(([r, sp, t]) => {
-      const a = Math.random() * Math.PI * 2;
+      [ 88, 'planet'],
+      [148, 'planet'],
+      [218, 'star'  ],
+      [295, 'planet'],
+    ].forEach(([r, t]) => {
+      const a  = Math.random() * Math.PI * 2;
+      const sp = vCirc(r);
       bodies.push(mkB(
         cx + Math.cos(a)*r, cy + Math.sin(a)*r,
         -Math.sin(a)*sp,     Math.cos(a)*sp, t
       ));
     });
 
-    // Moon around the second planet
+    // Moon around the second planet — circular orbit around the PLANET's mass,
+    // added on top of the planet's own velocity so it travels with it.
     const p2 = bodies[2], ma = Math.random()*Math.PI*2;
+    const vMoon = Math.sqrt(G * p2.mass * 24 / (24*24 + 80));
     bodies.push(mkB(
       p2.x + Math.cos(ma)*24, p2.y + Math.sin(ma)*24,
-      p2.vx - Math.sin(ma)*1.1, p2.vy + Math.cos(ma)*1.1, 'moon'
+      p2.vx - Math.sin(ma)*vMoon, p2.vy + Math.cos(ma)*vMoon, 'moon'
     ));
 
-    // Asteroid belt
+    // Asteroid belt — each asteroid on its own stable circular orbit
     for (let i = 0; i < 10; i++) {
       const a = Math.random()*Math.PI*2, r = 345+Math.random()*60;
-      bodies.push(mkB(cx+Math.cos(a)*r, cy+Math.sin(a)*r, -Math.sin(a)*0.86, Math.cos(a)*0.86, 'asteroid'));
+      const sp = vCirc(r);
+      bodies.push(mkB(cx+Math.cos(a)*r, cy+Math.sin(a)*r, -Math.sin(a)*sp, Math.cos(a)*sp, 'asteroid'));
     }
 
-    // Long-period comet
-    const ca = Math.random()*Math.PI*2;
+    // Long-period comet — deliberately elliptical (0.85× circular speed) so it
+    // sweeps in and back out, but fast enough NOT to plunge into the black hole.
+    const ca = Math.random()*Math.PI*2, rc = 430;
+    const sc = vCirc(rc) * 0.85;
     bodies.push(mkB(
-      cx+Math.cos(ca)*430, cy+Math.sin(ca)*430,
-      -Math.sin(ca)*1.50+0.30, Math.cos(ca)*1.50-0.25, 'comet'
+      cx+Math.cos(ca)*rc, cy+Math.sin(ca)*rc,
+      -Math.sin(ca)*sc, Math.cos(ca)*sc, 'comet'
     ));
 
   // ── Binary Black Holes ──────────────────────────────────────
